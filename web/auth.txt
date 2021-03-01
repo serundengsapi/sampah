@@ -1,0 +1,124 @@
+[ authentication ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[###] AUTHENTICATION TECHNOLOGIES:
+> HTML forms
+> multifactor
+> client ssl certs or smartcards
+> http basic and digest authentication (internet)
+> windows-integrated NTLM or Kerberos (intranet)
+> Authentication services
+
+[###] Threads:
+    [*] bad passwords
+    [*] brute-force login and number of attempts not controlled on the server
+    [*] verbose failure messages, BURP Comparer or Timing Differences
+    [*] Eavesdropping: even encrypted communications if params go in the query string: log, history, proxies, redirections and Replay of cookies
+    [*] password change functions : 
+    ///////////////////////////////////
+    >>> username enumeration
+    >>> unrestricted guesses of password field
+    >>> computations schemes
+    ///////////////////////////////////
+    [*] remember me : extrapolation of identifiers may be possible
+    [*] user impersonation functionality:
+    ///////////////////////////////////
+    >>> hidden functions without access control implemented.
+    >>> session tokens - cookies.
+    >>> backdoor passwords
+    ///////////////////////////////////
+    [*] incomplete validation of credentials
+    [*] nonunique usernames
+    [*] predictable usernames
+    [*] predictable initial passswords (intranet)
+    [*] account activation url predictable
+
+[###] Flaws:
+    [*] Fail-open mechanisms: too long, too short, charset, empty field..
+    [*] defects on multistage login (resubmitting data)
+    [*] insecure storage of credentials:
+    plain, md5, sha1 -> when not salted -> database of hashes (rainbow)
+    >>> If a password is transmitted back to the client, then it is sure that is stored insecurely - cleartext or reversible.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ session management ]
+[###] Weaknesses in Token Generation
+
+[*] Meaningful tokens:
+    [**] hex decoding, base64 decoding, etc... ~> meaningful string like: user=...;app=..;date=...;
+    [**] structured tokens, delimiters
+    XOR, base64, hex again ...
+    If some parts are not computed it can reduce complexity on a brute-force attack.
+    Identified changing bit per bit at a time on each part of the token
+
+[*] Predictable tokens:
+    [**] sequential numbers
+    [**] concealed sequences
+    [**] time-dependent tokens
+    [**] weak random number generation
+
+BURP Sequencer ~> Statistical analysis on a sample of tokens (character and bit level analysis)
+[+] Encrypted Tokens:
+    [+++] ECB Ciphers:
+    equal sized blocks (8 bytes) and encryption per block using a secret symmetric key.
+    >>> Problem of patterns(bitmaps)
+    >>> Switching Problem in each block of ciphertext
+    >>> Duplicate Problem
+    [+++]CBC Ciphers:
+    Before its block is encrypted it is XORed against the preceding block of ciphertext. Prevention of identical blocks from being encrypted into identical ciphertext blocks.
+    DES, AES normally uses CBC mode.
+    ~>  each block of decrypted data is XORed with the preceding cipher block bit flipper, modify each block of encrypted data bit per bit ~> converts that block of data to junk, but transforms the one below in something else another uid for example. Still may be successful.
+
+[###] Weaknesses in Session Token Handling:
+    [*] https authentication, but the rest of the session not encrypted ~> easy session hijacking
+    [*] session tokens delivered in an unauthenticated area not encrypted ~> easy session hijacking
+    [*] even when that two things are good. help, back, about buttons and images or resources via HTTP not encrypted ~> session hijacking
+    [*] sessions downgraded via sslstrip or whatever
+    WIR ESHARK
+    [*] secure flag tokens are never sent over unencrypted connections.
+    [*] Disclosure of Tokens in Logs. Referer Headers. When Tokens are within the query string (jsessionid for example)
+    [*] Vulnerable session Termination: expiration, logout functions not implemented, invalidation of old cookies,...
+    [*] Client Exposure: XSS, session fixation vulns, CSRF attacks.
+    [*] Liberal Cookie Scope: cookie domain restrictions and path restrictions.
+    >>> If an application explicitly liberalizes its cookies' scope to a parent domain, it may be leaving itself vulnerable to attacks via other web applications.
+    >>> Path restrictions are straightforward bypassed fooling the server. Examples:
+        http://some/bar/%2e%2e/foo/edit.cgi
+        http://some/bar/baz\..\../foo/edit.cgi
+        http://some/bar/%u002e%u002e/foo/edit.cgi
+
+[###] prevention : strong tokens (sha256 salted), per-page tokens, log activity...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ access controls ]
+Exploitation >>>>> Vertical or Horizontal Privelege Escalation or Businness Logic Exploitation
+
+[###] Vulnerabilities:
+    >>> Unprotected functionality
+    >>> Direct access to methods
+    >>> Identifier-based Functions /?docid=111234
+    >>> Multistage Functions
+    >>> Static Files, no logic implemented on static files
+    >>> Platform Misconfiguration
+    >>> Method-based
+    >>> Parameter-based
+    >>> Location-based
+
+[###] Map functions protected:
+    BURP. Use different user context to map the site and then compare results. BURP Compare site maps.
+    Easy Test: Visit the pages found by an authenticated user in a different context.
+    Identify name of resources and IDs used to accessed static files,
+    >>> commonly protected with anti-CSRF tokens
+    >>> use incremental and random numbers to test access controls.
+    Java naming conventions, Package structures
+
+
+    
+    
+
+
+
