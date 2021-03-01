@@ -1,0 +1,82 @@
+[ native compiled applications ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+on web applications locate .exe and .dll files and try each user input entry.
+
+[ Buffer Overflows ]
+
+[###] Stack Overflows:
+>>> strcpy in C: copy a variable-sized buffer into a fixed-size buffer without verification that the fixed-sized is large enough
+        bool CheckLogin(char* username, char* password)
+        {
+          char _username[32];
+          strcpy(_username, username);
+          ...
+        }
+
+     [+] stack-based buffer overflows involve overwriting the saved return address on the stack.
+        >>> When the function is called the processor pushes onto the stack the address of the instruction following the call
+        >>> When the function is finished, the processor pops this address back and returns execution to that instruction
+        >>> The _username buffer is allocated on the stack next to the saved return address.
+
+[###] Heap Overflows:
+        bool CheckLogin(char* username, char* password)
+        {
+          char* _username = (char*) malloc(32);
+          strcpy(_username, username);
+          ...
+        }
+
+     [+] What is next to the destination buffer is not the saved return address but other blocks of heap memory, separated by headp control structures 
+         common approach is to write crafted values into the heap control structure to cause an arbitrary
+         overwrite of a critical pointer at some future.
+
+commmon buffer sizes: 32,100,1024,4096
+BURP Intruder character blocks payload
+
+///////////////////////////////////////////
+[ Integer Bugs ]
+[###] Integer Overflows:
+          bool CheckLogin(char* username, char* password)
+          {
+             unsigned short len = strlen(username) + 1;
+             char* _username = (char*) malloc(len);
+             strcpy(_username, username);
+             ...
+          }
+>>> When a string of length 65535 or more is submitted, the value wraps to become 0.
+>>> A zero-length buffer is allocated and the long username is copied into it.
+>>> corruption of heap memory.
+
+[###] Signedness Errors:
+  The signed value is treated as its unsigned equivalent, a negative number becomes a large positive number.
+      bool CheckLogin(char* username, int len, char* password)
+      {
+        char _username[32] = â€œâ€;
+        if (len < 32)
+        strncpy(_username, username, len);
+        ...
+      }
+
+        [+] strncpy takes an unsigned integer at this parameter, implicitly casting the value of len to this type
+         so the negative value is treated to a large positive number the buffer is overflowed
+         when the len casts to a value larger than 32 bytes.
+
+
+[ Format Strings ]
+
+  printf family of functions in C, the format string passed to the function contains specifiers
+which tell it what kind of data is contained in the variable parameters
+and what format it should be rendered
+
+  %n is the most dangerous, it writes the number of bytes output so far to the address of the pointer passed
+in as the associated variable parameter.
+
+        [+] If an attacker controls all or part of the format string passed to a printf-style function he can exploit this to overwrite
+        critical parts of process memory and ultimately cause arbitrary code execution Because the attacker controls the format string
+        he can control both the number of bytes that the function outputs and the pointer on the stack that gets overwritten with
+        the number of bytes output.
+
+        [+] it can be detected submitting various format specifiers and monitor for any anomalies in behaviour. 
+        %n is usually blocked when a set of %s is submitted in a format string operation the dereference causes access violations.
