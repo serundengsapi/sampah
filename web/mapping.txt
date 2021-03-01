@@ -57,8 +57,8 @@ use BURP: CLUSTER  BOMB attack with custom lists
 
 [###] SERVER-SIDE TECH :
 [*] banner grabbing: Server response header, templates...
-(1) httprecon: fingerprint webserver's software
-(2) file extensions:
+[+] httprecon: fingerprint webserver's software
+[+] file extensions:
 [+] .asp,.aspx > Microsoft
 [+] .jsp > Java
 [+] .cfm > ColdFusion
