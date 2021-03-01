@@ -1,0 +1,102 @@
+[ other attacks against users ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[###] OSRF: 
+    >>> Arises when  user-supplied data is inserted into the target of a hyperlink or other URL within the returned page. Suitable request to target like add a new administrator...
+
+    type=question&name=daf&message=foo
+
+    <tr>
+    <td><img src=â€/images/question.gifâ€></td>
+    <td>daf</td>
+    <td>foo</td>
+    </tr>
+
+    payload for type parameter:
+    ../admin/newUser.php?username=daf2&password=0wned&role=admin#
+
+[###] CSRF: 
+    >>> Arises when applications rely solely on HTTP cookies for tracking sessions. The browser submits that cookie to the application in every subsequent request, regardless whether the request originated from a link or from any other source (email,malicious page...)
+
+    Also form submission. 
+    It can be combined with XSS to hijack user's sessions or further attacks.
+
+    When anti-CSRF tokens are used, still try brute-force user tokens.
+    No need to send them to the server, they can be compared with the browsing history (tokens must be reusable and within the target url, usually) via a CSS-based technique:
+    -   javascript API getComputedStyle
+
+    If a XSS flaw existed on the application (in whatever context) it can be exploited to defeat anti-CSRF tokens.
+
+    Referer headers are not reliable, they can be spoofed using older versions of Flash or masked using a meta refresh tag.
+
+[###] UI Redress aka Clickjacking or Strokejacking:
+
+    >>> iframe tag, css techniques: arbitrary size, arbitrary location within the attacker's page and showing and arbitrary location within the target page.
+    The context is on the real application the cookie is processed on each request, the session can be used to do whatever on the application, 
+    No need to know the anti-CSRF token. 
+    >>> javascript on the target application is not enough for preventing the framing: sandboxing, window.onbeforeunload event-handlers...
+
+    [*] prevention: In the header X-Frame-Options: deny--> completely disallow framing/sameorigin --> only the own application can frame the page.
+
+    Sometimes they are not set everywhere on the web application, like mobile versions...
+
+[###] Capturing Data Cross-Domain:
+
+[*] Injecting HTML: some limited use of html img and form tags can retrieve a great amount of information: anti-CSRF tokens...
+[*] Injecting CSS: when CSS is used html is ignored and the page is like a stylesheet.
+  >>> call it from outside and retrieve the parameter injected holding the anti-CSRF token...
+[*] JavaScript Hijacking: sensitive data can be retrieved from the javascript itself.
+
+[###] Session Fixation: cookie injection technique.
+Two conditions: ~> the application doesn't issue new tokens to authenticated users.
+                ~> the tokens can be fixed by the client.
+
+[###] Open Redirection: determine where user-controllable data is entered in a redirection:
+        >>> Location Header in 3xx responses
+        >>> Refresh Header
+        >>> meta tags
+        >>> javascript: document.location="..", document.URL, document.open(), window.location.href, window.navigate(), window.open()
+
+    [*] When filters are applied, try:
+
+    HtTp://attack.net
+    %00http://attack.net
+    http://attack.net
+    //attack.net
+    %68%74%74%70%3a%2f%2fattack.net
+    %2568%2574%2574%2570%253a%252f%252fattack.net
+    https://attack.net
+    http:\\attack.net
+
+    http://http://attack.net
+    http://attack.net/http://attack.net
+    hthttp://tp://attack.net
+
+    http://example.net.attack.net
+    http://attack.net/?http://example.net
+    http://attack.net/%23http://example.net
+
+[###] Local Privacy Attacks:
+        >>> Steal persistent Cookies
+        >>> Steal sensitive info in cached web content
+               C:\Documents and Settings\username\Local Settings\Application Data\Mozilla\Firefox\Profiles\profile name\Cache~/.mozilla/firefox/profile name/Cache
+        >>>History
+        >>>Autocomplete ---> sometimes accessible by XSS as well
+               Lots of storage mechanims on the client-side (SQL...)
+
+[###] ActiveX objects:
+      >>> When trusted by the user they can execute, read and write files on the client-side.
+[###] DNS Rebinding: 
+      >>> can be useful to defeat same origin policy. Port scanning retrieving information on non-http services on the internal network.
+[###] MITM attacks:
+        [+] Web application use one or more HTTP pages:
+              >>> Includes holding attacker's scripts on HTTP responses. 
+              >>> Induce redirections to the HTTPS to force HTTPS context using the same attacker's script code, compromising the content accessed via HTTPS.
+        [+] Web application use HTTPS only:
+              >>> Redirection of an HTTP external domain to same page on the target accessed via HTTP, the attacker can intercept the induced request and return arbitrary content in response to them.
+              >>> Further attacks to escalate the compomise into the HTTPS origin for the application's domain
+                  like cookie injection attacks that are processed in an unsafe weay be script code on HTTPS origin.
+                  also some browser extensions do not properly segregate content...
+
