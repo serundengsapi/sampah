@@ -1,110 +1,112 @@
-[mapping functionality and content]
+[ mapping functionality and content ]
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ~       Serundeng Sapi - Web Application Security        ~
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [###]WEB SPIDERING:
--BURP,web scarab,nikto,...
--robots.txt
--links on js code
--forms
--tokens within the URL
+> Burp, WebScarab, Nikto, etc.
+> /robots.txt
+> Links on js code
+> Forms
+> Tokens within the URL
 
-[*]user-directed spidering: slower but often better
+[!] user-directed spidering: slower but often better
 
-[*]hidden files:
--logs
--comments
--source code before compiled
--configuration and include files
--old versions of files
--default functionality
--backup archives
--naming schemes: 
-    .txt,.bak,.src,.inc,.old, .java,.cs,.php~1(temporary file),.tmp, .jsp
+[!] hidden files:
+> logs
+> omments
+> source code before compiled
+> configuration and include files
+> old versions of files
+> default functionality
+> backup archives
+> naming schemes : 
+    .txt|.bak|.src|.inc|.old|.java|.cs|.php~1(temporary file)|.tmp|.jsp
 
-[*]brute force:
--BURP Intruder
+[!] brute force:
+> BURP Intruder
 
-[*]auth functions: login,logout,register,profile
+[!] auth functions: login,logout,register,profile
 
-[*]public info:
--search engines(google hacking,netcraft,whois registries,...)
--web archives: www.archive.org
--search developers and emails (linkedin,forums,...), social engineering attacks
+[!] public info:
+> search engines (Google Hacking, NetCraft, Whois Registries, etc.)
+> web archives : www.archive.org
+> search developers and emails ( Linkedin, Forums, etc.), social engineering attacks
 
-[*]nikto uses large database of common web application software and scripts.
+[!] nikto uses large database of common web application software and scripts.
 example: search in /cgi-bin, via: nikto -root /cgi-bin/ (or -cgidirs)
 
-[*]third-party software: like CMS, shopping carts, forums,...
+[!] third-party software: like CMS, shopping carts, forums, etc.
 
-[*]locate file path and functional path: /admin.jsp?action=edituser
+[!] locate file path and functional path: /admin.jsp?action=edituser
 use inference
 
-[*]hidden parameters
+[!] hidden parameters
 example: debug=true (information disclosure, bad error handling...)
 more examples to try: test, hide, source.. with values 1,yes,true,on...
 use BURP: CLUSTER  BOMB attack with custom lists
 
-[###]USER INPUT ENTRY POINTS:
-[*]rest-style urls.
-[*]request params
-[*]http headers (referer,user-agent (in the log usually))
-[*]look for out-of-band channels: 
-webmail,smtp; 
-contents from other servers via HTTP,
-IDS,API interfaces non-browser(mobile devices)
+[###] USER INPUT ENTRY POINTS :
+[*] rest-style urls.
+[*] request params
+[*] http headers (referer,user-agent (in the log usually))
+[*] look for out-of-band channels : 
+> Webmail
+> Smtp
+> Contents from other servers via HTTP
+> IDS,API interfaces non-browser (mobile devices)
 
-[###]SERVER-SIDE TECH:
-[*]banner grabbing: Server response header, templates...
+[###] SERVER-SIDE TECH :
+[*] banner grabbing: Server response header, templates...
 (1) httprecon: fingerprint webserver's software
 (2) file extensions:
--.asp,.aspx--->Microsoft
--.jsp---->Java
--.cfm---->ColdFusion
--.php---->PHP
--.d2w---->websphere
--.pl----->Perl
--.py----->Python
--.dll---->compiled native code
--.nsf,.ntf---->Lotus Domino
+[+] .asp,.aspx > Microsoft
+[+] .jsp > Java
+[+] .cfm > ColdFusion
+[+] .php > PHP
+[+] .d2w > websphere
+[+] .pl > Perl
+[+] .py > Python
+[+] .dll > compiled native code
+[+] .nsf,.ntf > Lotus Domino
 
-calling non-existent files with the server's software extension, commonly customized errors
+[###] calling non-existent files with the server's software extension, commonly customized errors
 
-(3)directory names:
--servlet--->Java
--cfdocs,cfide--->ColdFusion
--pls----->oracle
--webobjects--->apple(woa)
--rails--->ruby
-...
+[!] directory names :
+[+] servlet > Java
+[+] cfdocs,cfide > ColdFusion
+[+] pls > oracle
+[+] webobjects > apple(woa)
+[+] rails > ruby
+[+] etc.
 
-(4)session-tokens:
--JSESSIONID---->java
--ASPSESSIONID----->iis server
--ASP.NET_SessionId---->asp.net
--CFID/CFTOKEN--->coldFusion
--PHPSESSID---->PHP
-(5)httprint or other automatization tool
+[!] session-tokens:
+[+] JSESSIONID > java
+[+] ASPSESSIONID > iis server
+[+] ASP.NET_SessionId > asp.net
+[+] CFID/CFTOKEN > coldFusion
+[+] PHPSESSID > PHP
 
-[###]SERVER-SIDE FUNCTIONALITY:
+[!] httprint or other automatization tool
+
+[###] SERVER-SIDE FUNCTIONALITY:
 sql,path traversal, emailing...
 
-(1)client-side validation not replicated on the server
-(2)database interaction: SQL injection
-(3)file uploading and downloading: stored XSS and path traversal vulns
-(4)Display user supplied data: reflected XSS
-(5)Dynamic Redirects: Header injection
-(6)Social Networking features
-(7)Login: username enumeration, weak passwords, brute-force
-(8)multistage login: logic flaws like open-fail flaws.
-(9)session state: tokens
-(10)access controls: privelege escalation vertical and horizontal
-(11)user impersonation functions
-(12)cleartext communications: session hijacking,capture of credentials...
-(13)off-site links: leakage of query string params in referer header
-(14)interfaces to external systems: shortcuts..
-(15)error messages: information disclosure
-(16)email interaction:os injection, smtp injection
-(17)native code components: buffer overflows
-(18)third-party applications components: known vulns
-(19)ident web-server software: common configuration weaknesses, default credentials, known bugs. www.osvdb.org
+[+] client-side validation not replicated on the server
+[+] database interaction: SQL injection
+[+] file uploading and downloading: stored XSS and path traversal vulns
+[+] Display user supplied data: reflected XSS
+[+] Dynamic Redirects: Header injection
+[+] Social Networking features
+[+] Login: username enumeration, weak passwords, brute-force
+[+] multistage login: logic flaws like open-fail flaws.
+[+] session state: tokens
+[+] access controls: privelege escalation vertical and horizontal
+[+] user impersonation functions
+[+] cleartext communications: session hijacking,capture of credentials...
+[+] off-site links: leakage of query string params in referer header
+[+] interfaces to external systems: shortcuts..
+[+] error messages: information disclosure
+[+] email interaction:os injection, smtp injection
+[+] native code components: buffer overflows
+[+] third-party applications components: known vulns
+[+] ident web-server software: common configuration weaknesses, default credentials, known bugs. www.osvdb.org
