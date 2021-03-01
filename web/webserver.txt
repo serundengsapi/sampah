@@ -1,0 +1,75 @@
+[ Web Servers Flaws ]
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~       Serundeng Sapi - Web Application Security        ~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+usually configuration issues or software bugs
+[###] SERVER CONFIGURATION [###]
+
+    [*] Default Credentials :
+
+        >>> like administrative interfaces publicly accesible on a specific location in the web root
+        or in a different port(8080,8443)
+        o-------------------------------o-------------------------------------------------------------------------------o
+        |   Apache Tomcat               | admin/,tomcat/tomcat, root/root                                               |
+        o-------------------------------o-------------------------------------------------------------------------------o
+        |   Sun JavaServer              |admin/admin                                                                    |
+        o-------------------------------o-------------------------------------------------------------------------------o
+        |   Netscape Enterprise Server  |admin/admin                                                                    |
+        o-------------------------------o-------------------------------------------------------------------------------o
+        |   Compaq Insight Manager      |administrator/administrator, anonymous/,user/user,                             |
+        |                               | operator/operator,user/public                                                 |
+        o-------------------------------o-------------------------------------------------------------------------------o
+        |   Zeus                        |admin/                                                                         |
+        o-------------------------------o-------------------------------------------------------------------------------o
+        www.cirt.net/passwords
+
+        >>> port scan to identify ports in used
+        >>> metasploit's built-in database to scan the server
+
+    [*] Default Content
+        [+] debug and test functionality:
+              phpinfo() page phpinfo.php --> PHP environment, conf settings, modules and file paths
+        [+]sample functionality
+        [+]powerful functions left accessible
+        [+]server manuals
+
+        >>> nikto
+
+    [*] Directory Listings:
+          responses varies:
+        [+] default resource within the directory like index.html
+        [+] an error 403 request not permitted
+        [+] listings ---> not a thread by itself but helpful if access control are misconfigured
+
+    [*] Proxy servers:
+            Servers that implement functions for proxying connections via HTTP.
+          Try GET/CONNECT methods with an absolute URL and the loopback.
+
+    [*] WebDAV Methods:
+        PUT, DELETE, COPY, MOVE, SEARCH -> searches a directory path for resources, PROPFIND -> retrieves information about the resource
+        OPTIONS
+        TRY RECURSIVELY, TRY ALL EXTENSIONS, some restrictions maybe imposed. Use a script to automatize
+        BURP Repeater
+        sometimes OPTIONS responses don't show all the methods allowed.
+        COMBINE PUT/MOVE like put a txt file and then move to a file with a different extension
+        HTML and JAR files are more likely to be allowed.
+
+    [*] Misconfigured Virtual Host : 
+          sometimes the default host is not configured.
+            [+] Submit get requests to the root directory using: a correct Host Header, and arbitrary one,
+                the server's IP address in the Host Header, and no Host Header.
+            [+] Responses may vary, and the server may simply respond with a directory listing and different
+                resources.
+            [+] -vhost option in Nikto.
+    
+[###] WEB SERVER FLAWS:
+        >>> Nessus
+        >>> OpenVas
+        >>> www.exploit-db.com
+        >>> www.metasploit.com
+        >>> https://nmap.org/mailman/listinfo/fulldisclosure
+
+[###] WAF: 
+  Commonly are signature-based and can't be detected and circumvented via non standard payloads.
+Words blocked include: passwd, sam database, script tag, and so on.
+They can not prevent attacks on authentication, session management and access controls; neither in web server faults.
